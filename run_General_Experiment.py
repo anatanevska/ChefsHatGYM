@@ -43,7 +43,7 @@ def runModel():
 
     createDataset = False  # weather to save the dataset
 
-    saveExperimentsIn = "saveExperiment/"  # Directory where the experiment will be saved
+    saveExperimentsIn = "saveExperiment"  # Directory where the experiment will be saved
 
     # Run simulation
     metrics = ChefsHatExperimentHandler.runExperiment(numGames=numGames, playersAgents=playersAgents,
@@ -61,7 +61,7 @@ config.gpu_options.allow_growth = True
 sess = tf.Session(config=config)
 K.set_session(sess)
 
-with tf.device('/gpu:0'):
+with tf.device('/cpu:0'): # changed from gpu:0 to cpu:0
     runModel()
 
 

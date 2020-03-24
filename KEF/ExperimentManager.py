@@ -101,6 +101,7 @@ class ExperimentManager:
 
         self._baseDirectory = baseDirectory
         self._experimentName = experimentName + "_" + str(datetime.datetime.now()).replace(" ", "_")
+        self._experimentName = experimentName + "_" + str(datetime.datetime.now()).replace(":", "_") # change for windows naming conventions
 
         """Creating the Model Folder"""
         self._createFolder("Model")
