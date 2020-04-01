@@ -1,0 +1,4 @@
+-----------------------------------------------------------------------------------------------------
+Experiment: Player_4_Cards_11_games_100TrainAgents_['DQL', 'DUMMY_RANDOM', 'DUMMY_RANDOM', 'DUMMY_RANDOM']_Reward_OnlyWinning_TrainingAgent_2020-03-25 12_13_05.066500
+-----------------------------------------------------------------------------------------------------
+2020-03-25_12:13:05.081500-Base Directory: saveExperiment/Player_4_Cards_11_games_100TrainAgents_['DQL', 'DUMMY_RANDOM', 'DUMMY_RANDOM', 'DUMMY_RANDOM']_Reward_OnlyWinning_TrainingAgent_2020-03-25 12_13_05.066500

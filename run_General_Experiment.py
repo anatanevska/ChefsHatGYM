@@ -22,7 +22,7 @@ def runModel():
 
     reward = RewardOnlyWinning.RewardOnlyWinning()
 
-    numGames = 1000  # amount of training games
+    numGames = 100  # amount of training games
     experimentDescriptor = "TrainingAgent"
 
     loadModelAgent1 = ""
