@@ -50,15 +50,24 @@ Each action taken by a player is validated based on a look-up-table, created in 
 
 Install the requirements from the Requirements.txt file.
 
-### Agents
+### Implemented Agents
 
 To run the experiment, you have to provide the experiment handler four agents. We include here the following
 agents implementations:
  - Dummy agent Random: an agent that does not learn, and select all actions randomly based on the possible actions. (more info: https://arxiv.org/abs/2003.05861).
  - Dummy agent AlwaysOneCard: an agent that does not learn, and only select all actions randomly based on discarding o
  nly one card at a time.
- - DeepQL Agent: an agent that learns how to play the game based on deep Q-learning. (more info: https://arxiv.org/abs/2003.05861).
-
+ - DeepQL Agent (more info: https://arxiv.org/abs/2003.05861).
+ - Advantage Actor-Critic Agent (more info: https://arxiv.org/abs/2004.04000)
+ - Proximal Policy Optmization Agent (more info: https://arxiv.org/abs/2004.04000)
+ 
+ ### Plugins
+ 
+  ![Plots Example](gitImages/MoodPlotsExample.png)
+  
+ - Moody Framework ( https://github.com/pablovin/MoodyFramework)
+   - A plugin that endowes each agent with an intrinsic state which is impacted by the agent's
+  own actions. 
 
 ### Simulation Data Structure
 
@@ -72,14 +81,9 @@ behavior during the experiments. For each experiment, one folder is created with
 
 ##### Datasets
 
-The environment saves a dataset, in the format of .csv files, that stores the dated game state, the taken actions, and game
-events that happen during one game play. The dataset is used later on to create a game-play video, and to extract specific
-metrics of that gameplay.
+The environment saves a dataset, in the format of .pkl files, that stores the entire game state over all the performed experiments. 
+The dataset can be used later on to create specific plots, or to render the game-play video.
 
-![Dataset Example](gitImages/datasetExample.csv.png)
-
-
-Our Examples folder holds specific examples of recorded datasets.
 
 ##### Logs and Metrics
 
@@ -107,41 +111,37 @@ Also in the Log folder, the environment saves a metrics.csv file. This file cont
 
 ##### Plots
 
-The environment calculates a series of plots to better understand the simulation. The plots folder holds:
+The environment is able to create a series of plots to better understand the simulation.
+The plots are created based on a saved dataset. Currently the following plots are available:
+    
+- "Experiment_Winners" - Victories histogram per game in a series of games.
+- "Experiment_Rounds" - Number of rounds per game in a series of games.
+- "Experiment_FinishingPosition" - Finishing position per player in a series of games.
+- "Experiment_ActionsBehavior":"expActionBeh" - Distribution of each player's action behavior in a series of games.
+- "Experiment_Reward" - Reward per player in a series of games.
+- "Experiment_CorrectActions" - Number of valid actions performed by each player in a series of games.
+- "Experiment_QValues" - Q-values for each action of each player in a sereis of games.
+- "Experiment_Losses" - Training loss evolution of each training agent in a series of games.
 
-![Plots per game](gitImages/allPlots.png)
-
-- A) Number of rounds per game
-- B) Victories histogram per game
-- C) Finishing position per player
-- D) Reward valid actions per player
-- E) Invalid actions per player
-- F) Players timeline per game
-- G) The discard behavior of each player per game
-
-### Running experiments 
+##### Running experiments 
 
 Currently, the environment implements the following experiments and examples:
- - run_General_Experiment.py illustrates how to run an experiment composed of four agents and a series of games.
- - Experiments_Media/generateVideos.py illustrates how to generate videos from collected datasets.
- - Experiments_Media/generateTimeLine.py illustrates how to generate timeline plots from collected datasets.
+ - run_General_Experiment.py - Run an experiment composed of four agents and a series of games.
+ - Experiments_Media/run_CreateVideoFromDataset.py - Generate videos from collected datasets.
+ - Experiments_Media/run_CreatePlotFromDataset.py  - Generate  plots from collected datasets.
  - Experiments_Optmization folder contains examples on how to run an agent optmization based on Hyperopt.
  - Experiments_Publications folder contains the following implementations:
-    - IROS_2020: Barros, P., Sciutti, A., Hootsmans, I. M., Opheij, L. M., Toebosch, R. H., & Barakova, E. (2020) The Chef's Hat Simulation Environment for Reinforcement-Learning-Based Agents. arXiv preprint arXiv:2003.05861. (https://arxiv.org/abs/2003.05861)
- 
+    - (Submitted) IROS_2020: Barros, P., Sciutti, A., Hootsmans, I. M., Opheij, L. M., Toebosch, R. H., & Barakova, E. (2020) The Chef's Hat Simulation Environment for Reinforcement-Learning-Based Agents. arXiv preprint arXiv:2003.05861. (https://arxiv.org/abs/2003.05861)
+    - (Submitted) ICPR2020: Barros, P., Tanevska, A., & Sciutti, A. (2020). Learning from Learners: Adapting Reinforcement Learning Agents to be Competitive in a Card Game. arXiv preprint arXiv:2004.04000.
  
  ##### Videos
  
  The simulator has a specific funcionality that reads a given dataset and generates an entire video of that gameplay.
  The video can be used to evaluate a specific behavior, or just to illustrate how the agents play the game.
  The following link directs to a video example:
- [![Watch the video](Examples/exampleSimulator.png)](https://www.youtube.com/embed/rxp3Xx4De7k)
  
-
-## Examples
-
-The Examples folder contains the datasets and generated videos of two conditions: Running all four agents as random agents, and running all four agents as learning agents.
-
+ [![Watch the video](gitImages/simulationExample.png)](https://www.youtube.com/embed/rxp3Xx4De7k)
+ 
 
  ## Use and distribution policy
 
@@ -158,6 +158,7 @@ All the examples in this repository are distributed under a Non-Comercial licens
 
 - Barros, P., Sciutti, A., Hootsmans, I. M., Opheij, L. M., Toebosch, R. H., & Barakova, E. (2020) The Chef's Hat Simulation Environment for Reinforcement-Learning-Based Agents. arXiv preprint arXiv:2003.05861.
 
+- Barros, P., Tanevska, A., & Sciutti, A. (2020). Learning from Learners: Adapting Reinforcement Learning Agents to be Competitive in a Card Game. arXiv preprint arXiv:2004.04000.
 ## Contact
 
 Pablo Barros - pablo.alvesdebarros@iit.it

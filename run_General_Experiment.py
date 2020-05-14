@@ -1,67 +1,88 @@
 from ExperimentHandler import ChefsHatExperimentHandler
 
-from Agents import AgentRandom, AgentDQL, AgentA2C, AgentDDPG
+from Agents import AgentRandom, AgentDQL, AgentA2C, AgentPPO
+from KEF.PlotManager import plots
 
-from Rewards import RewardOnlyWinning, RewardIROSPaper
+from Rewards import RewardOnlyWinning
 import tensorflow as tf
 from keras import backend as K
 
-import os
 
+import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-
 def runModel():
-    # Parameters of the agents
-    agent1 = AgentDQL.AgentDQL([True, 1.0])  # training agent
-    agent2 = AgentRandom.AgentRandom(AgentRandom.DUMMY_RANDOM)
-    agent3 = AgentRandom.AgentRandom(AgentRandom.DUMMY_RANDOM)
-    agent4 = AgentRandom.AgentRandom(AgentRandom.DUMMY_RANDOM)
 
-    playersAgents = [agent1, agent2, agent3, agent4]  # if training specific agents
+    #Plots
+    plotsToGenerate = [plots["Experiment_Rounds"], plots["Experiment_FinishingPosition"], plots["Experiment_ActionsBehavior"],
+                   plots["Experiment_Reward"], plots["Experiment_QValues"], plots["Experiment_Mood"], plots["Experiment_MoodNeurons"],
+                   plots["Experiment_SelfProbabilitySuccess"]]
+    plotsToGenerate = []
 
-    reward = RewardOnlyWinning.RewardOnlyWinning()
+    #Parameters for the agents
+    agent1 = AgentDQL.AgentDQL([False, 1.0, "DQL"]) #training agent
+    agent2 = AgentPPO.AgentPPO([False, 1.0, "PPO"]) #training agent
+    agent3 = AgentA2C.AgentA2C([False, 1.0, "A2C"])  # training agent
+    agent4 = AgentRandom.AgentRandom(AgentRandom.DUMMY_RANDOM)  # training agent
 
+<<<<<<< HEAD
     numGames = 100  # amount of training games
     experimentDescriptor = "TrainingAgent"
+=======
+    #Load agents from
+    DQLModel = ""
+>>>>>>> 56fe0b6045e28c9d958bf287aa6ee459423d54f3
 
-    loadModelAgent1 = ""
-    loadModelAgent2 = ""
-    loadModelAgent3 = ""
-    loadModelAgent4 = ""
+    A2cActor = ""
+    A2cCritic = ""
 
-    loadModel = [loadModelAgent1, loadModelAgent2, loadModelAgent3,
-                 loadModelAgent4]  # indicate where the saved model is
+    PPOActor = ""
+    PPOCritic = ""
 
-    # #Parameters for controling the experiment
+    loadModelAgent1 = DQLModel
+    loadModelAgent3 = [A2cActor, A2cCritic]
+    loadModelAgent2 = [PPOActor,PPOCritic]
+    loadModelAgent4 =""
 
-    isLogging = False  # Logg the experiment
+    loadModel = [loadModelAgent1,loadModelAgent2, loadModelAgent3, loadModelAgent4]
 
-    isPlotting = True  # plot the experiment
+    #List of agents
+    playersAgents = [agent1, agent2, agent3, agent4]
 
-    plotFrequency = 1000  # plot the plots every X games
+    #Reward function
+    reward = RewardOnlyWinning.RewardOnlyWinning()
 
-    createDataset = False  # weather to save the dataset
+    #Experimental parameters
+    numGames = 1 # amount of games to be executed
+    experimentDescriptor = "GeneralTraining" #Experiment name
 
+    isLogging = False # create a .txt file with the experiment log
+
+<<<<<<< HEAD
     saveExperimentsIn = "saveExperiment"  # Directory where the experiment will be saved
+=======
+    isPlotting = True #Create plots of the experiment
+>>>>>>> 56fe0b6045e28c9d958bf287aa6ee459423d54f3
 
-    # Run simulation
-    metrics = ChefsHatExperimentHandler.runExperiment(numGames=numGames, playersAgents=playersAgents,
-                                                      experimentDescriptor=experimentDescriptor, isLogging=isLogging,
-                                                      isPlotting=isPlotting, plotFrequency=plotFrequency,
-                                                      createDataset=createDataset, saveExperimentsIn=saveExperimentsIn,
-                                                      loadModel=loadModel, rewardFunction=reward)
+    createDataset = True # Create a .pkl dataset of the experiemnt
 
-    print("Metrics:" + str(metrics))
+    saveExperimentsIn = ""  # Directory where the experiment will be saved
 
+    metrics = ChefsHatExperimentHandler.runExperiment(numGames=numGames, playersAgents=playersAgents,experimentDescriptor=experimentDescriptor,isLogging=isLogging,isPlotting=isPlotting, createDataset=createDataset,saveExperimentsIn=saveExperimentsIn, loadModel=loadModel, rewardFunction=reward, plots=plotsToGenerate)
 
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 
 sess = tf.Session(config=config)
+# from keras import backend as K
 K.set_session(sess)
 
+<<<<<<< HEAD
 with tf.device('/cpu:0'): # changed from gpu:0 to cpu:0
     runModel()
 
 
+=======
+with tf.device('/cpu:0'):
+    runModel()
+>>>>>>> 56fe0b6045e28c9d958bf287aa6ee459423d54f3

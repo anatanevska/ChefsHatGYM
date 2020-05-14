@@ -50,7 +50,6 @@ class ChefsHatEnv(gym.Env):
 
     possibleActions = self.getPossibleActions(self.currentPlayer)
 
-
     if self.isActionAllowed(self.currentPlayer, action):  # if the player can make the action, do it.
         # reward = 1.0  # Experiment 1
         validAction = True
@@ -102,7 +101,8 @@ class ChefsHatEnv(gym.Env):
         # reward = 0
         reward = self.rewardFunction.getRewardInvalidAction()  # experiment 3
         validAction = False
-        actionTaken = "Invalid"
+        actionTaken = DataSetManager.actionInvalid
+        actionComplete = (DataSetManager.actionInvalid, [0])
         self.currentWrongActions[self.currentPlayer] += 1
         # self.currentWrongActions += 1
 
@@ -127,17 +127,17 @@ class ChefsHatEnv(gym.Env):
             # reward = -0.01  # experiment 3
             actionTaken = DataSetManager.actionFinish
             actionTag = DataSetManager.actionFinish
-            # actionComplete = (DataSetManager.actionFinish, [0])
+            actionComplete = (DataSetManager.actionFinish, cardsDiscarded)
             # print ("Score", self.score)
             # input("here")
 
     #Update the player last action
-    self.lastActionPlayers[self.currentPlayer] = actionTaken
+    self.lastActionPlayers[self.currentPlayer] = actionComplete
 
     self.currentActionRewards.append(reward)
 
 
-    self.currentGameRewards[self.currentPlayer].append(reward)
+    # self.currentGameRewards[self.currentPlayer].append(reward)
 
 
     if validAction:
@@ -160,7 +160,7 @@ class ChefsHatEnv(gym.Env):
       for a in range(i):
         self.cards.append(self.maxCardNumber - a)
 
-    #add joker dards
+    #add joker cards
     self.cards.append(self.maxCardNumber+1) # add a joker card
     self.cards.append(self.maxCardNumber + 1) # add a joker card
 
@@ -249,8 +249,6 @@ class ChefsHatEnv(gym.Env):
         if not foodFight or not specialAction:
             self.changeRoles(foodFight)
 
-
-
     # Establishes who starts the game randomly
     playerTurn = numpy.array(range(self.numberPlayers))
     random.shuffle(playerTurn)
@@ -283,14 +281,14 @@ class ChefsHatEnv(gym.Env):
     # print ("Number of Players:", self.numberPlayers)
     # print ("Number of Players:", self.numberPlayers)
     for i in range(self.numberPlayers):
-
-      # print ("player "+str(i)+" action:" + str(self.lastActionPlayers[i]))
-      if self.lastActionPlayers[i] == DataSetManager.actionPass:
-        allPLayerFinished = allPLayerFinished + 0
-      elif self.lastActionPlayers[i] == DataSetManager.actionFinish:
-        allPLayerFinished = allPLayerFinished + 0
-      else:
-        allPLayerFinished = allPLayerFinished + 1
+      if not self.currentPlayer == i:
+          # print ("player "+str(i)+" action:" + str(self.lastActionPlayers[i]))
+          if self.lastActionPlayers[i][0] == DataSetManager.actionPass:
+            allPLayerFinished = allPLayerFinished + 0
+          elif self.lastActionPlayers[i][0] == DataSetManager.actionFinish:
+            allPLayerFinished = allPLayerFinished + 0
+          else:
+            allPLayerFinished = allPLayerFinished + 1
 
     if allPLayerFinished == 0:
       self.restartBoard()
@@ -349,34 +347,11 @@ class ChefsHatEnv(gym.Env):
 
       cardDescription = ""
       for cardNumber in range (self.maxCardNumber):
-          possibleAction = 0
-          # print ("Card Number:", cardNumber+1)
-          # # print("cardNumber:", cardNumber + 1)
-          # #
-          # print("- Player:", player)
-          # print("- Hand:", currentPlayerHand)
-          # print("- Current board:", currentBoard)
-          # print("- Highest card on board:", highestCardOnBoard)
-          # print("-Card lower than the ones in the board:", cardNumber + 1 < highestCardOnBoard)
-          # print("-Card present in the player hand:", cardNumber + 1 in self.playersHand[player])
-
-          # if this card is present in the hand and it is lower than the cards in the board
           for cardQuantity in range(cardNumber+1):
-
 
               # if cardQuantity == 0:
               #       print (len(possibleActions))
               if (cardNumber + 1 < highestCardOnBoard ) and cardNumber + 1 in self.playersHand[player]:
-
-              #verify if the quantity of the card in the hand is allowed to be put down
-
-                  # if the amount of cards in board and in the hand are the same or more than cardNumber quantity
-                  # print("-- Card quantity:", cardQuantity+1)
-                  # print("-- Amount of cards in hand:", currentPlayerHand[cardNumber + 1])
-                  # print("-- Amount of cards in board:", currentBoard[highestCardOnBoard])
-                  # print("-- Can I discard this qunatity:", currentPlayerHand[cardNumber + 1] >= cardQuantity+1)
-                  # print("-- Is it the same or more than in the board:", currentBoard[
-                  #     highestCardOnBoard] <= cardQuantity + 1)
 
                   if currentPlayerHand[cardNumber + 1] >= cardQuantity + 1 and (currentBoard[
                       highestCardOnBoard] + jokerQuantityBoard) <= cardQuantity + 1: # taking into consideration the amount of jokers in the board
@@ -389,25 +364,22 @@ class ChefsHatEnv(gym.Env):
                              possibleActions.append(1)
                          else:
                              possibleActions.append(0)
-                             # highLevelActions.append("C" + str(cardNumber + 1) + ";Q" + str(cardQuantity + 1) + ";J0")
+
                       else:
-                          # print("----- Added here!")
+
                           possibleActions.append(1)
-                          # highLevelActions.append("C" + str(cardNumber+1) + ";Q" + str(cardQuantity+1) + ";J0")
+
                   else:
 
                           possibleActions.append(0)
-                          # highLevelActions.append("C" + str(cardNumber+1) + ";Q" + str(cardQuantity+1) + ";J0")
-
               else:
                   possibleActions.append(0)
-                  # highLevelActions.append("C" + str(cardNumber+1) + ";Q" + str(cardQuantity+1) + ";J0")
+
 
               highLevelActions.append("C" + str(cardNumber + 1) + ";Q" + str(cardQuantity + 1) + ";J0")
               highLevelActions.append("C" + str(cardNumber + 1) + ";Q" + str(cardQuantity + 1) + ";J1")
               highLevelActions.append("C" + str(cardNumber + 1) + ";Q" + str(cardQuantity + 1) + ";J2")
               # if cardNumber
-
 
 
               # add the joker possibilities
@@ -434,7 +406,6 @@ class ChefsHatEnv(gym.Env):
                          possibleActions.append(0) # I cannot discard one joker
 
 
-
                      if jokerQuantity == 2:
                         #for two joker
                         if currentPlayerHand[cardNumber + 1] >= cardQuantity -1 and (currentBoard[
@@ -457,16 +428,11 @@ class ChefsHatEnv(gym.Env):
                      else:
                         possibleActions.append(0) # I cannot discard two jokers
 
-                  # elif highestCardOnBoard == self.maxCardNumber: # if I do not have the card in the hand
-                  #       possibleActions.append(1)
-                  #       possibleActions.append(0)
 
                   else:  # there is no joker in the hand
                       possibleActions.append(0) # I cannot discard one joker
 
                       possibleActions.append(0) # I cannot discard two joker
-
-
 
 
               else:
@@ -475,12 +441,6 @@ class ChefsHatEnv(gym.Env):
                   possibleActions.append(0)  # I cannot discard two joker
 
 
-
-      # print ("Possible actions:", possibleActions)
-      # input("here")
-
-      #Joker actions
-      # verify how many jokers the player has at hand
       highLevelActions.append("C0;Q0;J1")
       if self.maxCardNumber+1 in self.playersHand[player]: # there is a joker in the hand
           if firstAction:
@@ -517,48 +477,24 @@ class ChefsHatEnv(gym.Env):
           return False
 
   def discardCards(self, player, action):
-
-      action = numpy.argmax(action)
-      self.restartBoard()
       cardsToDiscard = []
+      actionIndex = numpy.argmax(action)
+      takenAction = self.highLevelActions[actionIndex].split(";")
+      cardValue = int(takenAction[0][1:])
+      cardQuantity = int(takenAction[1][1:])
+      jokerQuantity = int(takenAction[2][1:])
 
-      #find the cards to discard
-      discardIndex = 0
-      for cardNumber in range (self.maxCardNumber):
-          for cardQuantity in range (cardNumber+1):
+      for q in range(cardQuantity):
+          cardsToDiscard.append(cardValue)
+      for j in range(jokerQuantity):
+          cardsToDiscard.append(12)
 
-              if discardIndex == action:
-                  for i in range(cardQuantity+1): # the card quantity starts always with 1
-                      cardsToDiscard.append(cardNumber+1) # the card number starts always with 1
-
-              #discard card + 1 Joker
-              discardIndex = discardIndex + 1
-              if discardIndex == action:
-                  for i in range(cardQuantity+1): # the card quantity starts always with 1
-                      cardsToDiscard.append(cardNumber+1) # the card number starts always with 1
-                  cardsToDiscard.append(self.maxCardNumber+1)
-
-              #discard card +2 Jokers
-              discardIndex = discardIndex + 1
-              if discardIndex == action:
-                  for i in range(cardQuantity+1): # the card quantity starts always with 1
-                      cardsToDiscard.append(cardNumber+1) # the card number starts always with 1
-                  cardsToDiscard.append(self.maxCardNumber+1)
-                  cardsToDiscard.append(self.maxCardNumber + 1)
-
-
-              discardIndex = discardIndex + 1
-
-      #discard only the joker
-      if action == self.numberOfActions-2:
-          cardsToDiscard.append(self.maxCardNumber + 1)
-
+      self.restartBoard()
 
       originalCardDiscarded = cardsToDiscard.copy()
       # remove them from the players hand and add them to the board
       boardPosition = 0
       for cardIndex in range(len(self.playersHand[player])):
-
           # print ("Cards to discard:", len(cardsToDiscard))
           for i in cardsToDiscard:
               # print("Card to discard:", i)
@@ -570,7 +506,7 @@ class ChefsHatEnv(gym.Env):
                   # self.playersHand[player].remove(i)
                   cardsToDiscard.remove(i)
                   self.board[boardPosition] = i
-                  boardPosition = boardPosition+1
+                  boardPosition = boardPosition + 1
 
       # print("cardsToDiscard:", originalCardDiscarded)
       # print("self.playersHand[player]:", self.playersHand[player])
@@ -579,6 +515,68 @@ class ChefsHatEnv(gym.Env):
 
       self.playersHand[player] = sorted(self.playersHand[player])
       return originalCardDiscarded
+
+      # action = numpy.argmax(action)
+      # self.restartBoard()
+      # cardsToDiscard = []
+      #
+      # #find the cards to discard
+      # discardIndex = 0
+      # for cardNumber in range (self.maxCardNumber):
+      #     for cardQuantity in range (cardNumber+1):
+      #
+      #         if discardIndex == action:
+      #             for i in range(cardQuantity+1): # the card quantity starts always with 1
+      #                 cardsToDiscard.append(cardNumber+1) # the card number starts always with 1
+      #
+      #         #discard card + 1 Joker
+      #         discardIndex = discardIndex + 1
+      #         if discardIndex == action:
+      #             for i in range(cardQuantity+1): # the card quantity starts always with 1
+      #                 cardsToDiscard.append(cardNumber+1) # the card number starts always with 1
+      #             cardsToDiscard.append(self.maxCardNumber+1)
+      #
+      #         #discard card +2 Jokers
+      #         discardIndex = discardIndex + 1
+      #         if discardIndex == action:
+      #             for i in range(cardQuantity+1): # the card quantity starts always with 1
+      #                 cardsToDiscard.append(cardNumber+1) # the card number starts always with 1
+      #             cardsToDiscard.append(self.maxCardNumber+1)
+      #             cardsToDiscard.append(self.maxCardNumber + 1)
+      #
+      #
+      #         discardIndex = discardIndex + 1
+      #
+      # #discard only the joker
+      # if action == self.numberOfActions-2:
+      #     cardsToDiscard.append(self.maxCardNumber + 1)
+      #
+
+      # originalCardDiscarded = cardsToDiscard.copy()
+      # # remove them from the players hand and add them to the board
+      # boardPosition = 0
+      # for cardIndex in range(len(self.playersHand[player])):
+      #
+      #     # print ("Cards to discard:", len(cardsToDiscard))
+      #     for i in cardsToDiscard:
+      #         # print("Card to discard:", i)
+      #         # print("card in player hand:", self.playersHand[player][cardIndex] )
+      #         if self.playersHand[player][cardIndex] == i:
+      #             # print ("removing...")
+      #
+      #             self.playersHand[player][cardIndex] = 0
+      #             # self.playersHand[player].remove(i)
+      #             cardsToDiscard.remove(i)
+      #             self.board[boardPosition] = i
+      #             boardPosition = boardPosition+1
+      #
+      # # print("cardsToDiscard:", originalCardDiscarded)
+      # # print("self.playersHand[player]:", self.playersHand[player])
+      # # print("boardPosition:", self.board)
+      # # input("here")
+      #
+      # self.playersHand[player] = sorted(self.playersHand[player])
+      # return originalCardDiscarded
 
 
   def startNewGame(self, maxCardNumber=4, numberPlayers=2, numGames=0, rewardFunction=""):
@@ -774,7 +772,7 @@ class ChefsHatEnv(gym.Env):
     for a in self.board:
       stateVector.append(a)
 
-    return numpy.array(stateVector) / self.maxCardNumber  # preprocess the state input
+    return numpy.array(stateVector) / (self.maxCardNumber+2)  # preprocess the state input
 
   def writeLog(self, message):
       self.logger.write(message)

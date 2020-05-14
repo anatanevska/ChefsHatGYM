@@ -1,11 +1,13 @@
 from ExperimentHandler import ChefsHatExperimentHandler
 
-from Agents import  AgentRandom, AgentDQL, AgentA2C, AgentDDPG
+from Agents import  AgentRandom, AgentDQL, AgentA2C, AgentPPO
 
-from Rewards import RewardOnlyWinning, RewardOnlyWinning_PunishmentInvalid
+from Rewards import RewardOnlyWinning
 import tensorflow as tf
 from keras import backend as K
 import numpy
+
+import random
 
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -13,28 +15,20 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def runModel():
     #Parameters for the game
-    agent1 = AgentDQL.AgentDQL([True, 1.0]) #training agent
-    agent2 = AgentDQL.AgentDQL([True, 1.0])
-    agent3 = AgentDQL.AgentDQL([True, 1.0])
-    agent4 = AgentDQL.AgentDQL([True, 1.0])
+    agent1 = AgentPPO.AgentPPO([True, 1.0]) #training agent
+    agent2 = AgentPPO.AgentPPO([True, 1.0])
+    agent3 = AgentPPO.AgentPPO([True, 1.0])
+    agent4 = AgentPPO.AgentPPO([True, 1.0])
 
      # if training specific agents
     playersAgents = [agent1, agent2, agent3, agent4]
 
     reward = RewardOnlyWinning.RewardOnlyWinning()
 
-    numExperiments = 20 # number of experiments. At the end of each experiment, we copy the best player and make them play against each other.
-    numGames = 2000# amount of training games
+    numExperiments = 50 # number of experiments. At the end of each experiment, we copy the best player and make them play against each other.
+    numGames = 1000# amount of training games
 
-    experimentDescriptor = "Training_SelfPlay_"
-
-    actorModelA2C = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/BaselineExperiments/Optmizing/A2C, DQL, DDPG/Player_4_Cards_11_games_500TrainAgents_['A2C', 'DUMMY_RANDOM', 'DUMMY_RANDOM', 'DUMMY_RANDOM']_Reward_OnlyWinning_TrainingHyperoptAgent_2020-03-17_09:43:50.235338/Model/actor_iteration_499.hd5"
-    criticModelA2c = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/BaselineExperiments/Optmizing/A2C, DQL, DDPG/Player_4_Cards_11_games_500TrainAgents_['A2C', 'DUMMY_RANDOM', 'DUMMY_RANDOM', 'DUMMY_RANDOM']_Reward_OnlyWinning_TrainingHyperoptAgent_2020-03-17_09:43:50.235338/Model/critic_iteration_499.hd5"
-
-    actorModelDDPG = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/BaselineExperiments/Optmizing/A2C, DQL, DDPG/Player_4_Cards_11_games_500TrainAgents_['DDPG', 'DUMMY_RANDOM', 'DUMMY_RANDOM', 'DUMMY_RANDOM']_Reward_OnlyWinning_TrainingMyAgent_2020-03-17_10:48:23.512129/Model/actor_iteration_499.hd5"
-    criticModelDDPG = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/BaselineExperiments/Optmizing/A2C, DQL, DDPG/Player_4_Cards_11_games_500TrainAgents_['DDPG', 'DUMMY_RANDOM', 'DUMMY_RANDOM', 'DUMMY_RANDOM']_Reward_OnlyWinning_TrainingMyAgent_2020-03-17_10:48:23.512129/Model/critic_iteration_499.hd5"
-
-    DQLModel = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/Gym_Experiments_SelfPlay/DQL_100x10/initial_10_epsilon_0.5/Player_4_Cards_11_games_200TrainAgents_['DQL', 'DQL', 'DQL', 'DQL']_Reward_OnlyWinning_Training_SelfPlay__GameExperimentNumber_9_Best_Agent_2_2020-03-19_16:25:00.815412/Model/actor_iteration_99_Player_0.hd5"
+    experimentDescriptor = "Training"
 
 
     loadModelAgent1 =""#""#""  #DQLModel #[actorModelA2C,criticModelA2c] #[actorModelDDPG,criticModelDDPG]
@@ -59,7 +53,7 @@ def runModel():
 
     createDataset = False # weather to save the dataset
 
-    saveExperimentsIn = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/Gym_Experiments_SelfPlay/DQL_2000x20/" # Directory where the experiment will be saved
+    saveExperimentsIn = "/home/pablo/Documents/Datasets/ChefsHat_ReinforcementLearning/ICPR_Experiments/PPO/Self/50x1000/" # Directory where the experiment will be saved
 
     # #Initial Run
     # metrics = ChefsHatExperimentHandler.runExperiment(numGames=numGames, playersAgents=playersAgents,
@@ -71,18 +65,47 @@ def runModel():
     bestAgent = 0
     description = experimentDescriptor
     epsilon = 1.0
+
+    bestAgentsList = []
+    secondBestList = []
+    lastBestAgent = ""
+
     for i in range(numExperiments):
 
+        agents = []
+        agentsChoice = ""
+        for agentNumber in range(3):
+            probNumber = numpy.random.rand()
 
+            if probNumber <= 0.33:  # Pull from the BestAgentList
+                if len(bestAgentsList) == 0:
+                    agents.append("")
+                else:
+                    random.shuffle(bestAgentsList)
+                    agents.append(bestAgentsList[0])
+                agentsChoice = agentsChoice + "BestAgents-"
 
+            elif probNumber > 0.33 and probNumber <= 0.66:  # Pull from the secondBestList
+                if len(secondBestList) == 0:
+                    agents.append("")
+                else:
+                    random.shuffle(secondBestList)
+                    agents.append(secondBestList[0])
+                agentsChoice = agentsChoice + "SecondBestAgents-"
+            else:  # start a new agent from the scratch
+                agents.append("")
+                agentsChoice = agentsChoice + "Scratch-"
+        agents.append(lastBestAgent)
+
+        loadModel = agents
         # Train the best scored one
-        agent1 = AgentDQL.AgentDQL([True, epsilon])  # training agent
-        agent2 = AgentDQL.AgentDQL([True, epsilon])
-        agent3 = AgentDQL.AgentDQL([True, epsilon])
-        agent4 = AgentDQL.AgentDQL([True, epsilon])
-        epsilon = epsilon * 0.7
-        if epsilon < 0.1:
-            epsilon = 0.1
+        agent1 = AgentPPO.AgentPPO([True, epsilon])  # training agent
+        agent2 = AgentPPO.AgentPPO([True, epsilon])
+        agent3 = AgentPPO.AgentPPO([True, epsilon])
+        agent4 = AgentPPO.AgentPPO([True, epsilon])
+        # epsilon = epsilon * 0.7
+        # if epsilon < 0.1:
+        #     epsilon = 0.1
         # if training specific agents
         playersAgents = [agent1, agent2, agent3, agent4]
 
@@ -95,10 +118,15 @@ def runModel():
         #
         # loadModel = [loadModelAgent1, loadModelAgent2, loadModelAgent3, loadModelAgent4]
 
-        numGames = 2000
+        numGames = 1000
+        plotFrequency = 1000  # plot the plots every X games
+        print ("Choices: "+ str(agentsChoice))
         print("Best agent: " + str(bestAgent) + " - Loading:" + str(loadModel))
+
         # input("here")
-        experimentDescriptor = description + "_GameExperimentNumber_" + str(i) + "_Best_Agent_" + str(bestAgent)
+        # experimentDescriptor = description + "_GameExperimentNumber_" + str(i) + "_Best_Agent_" + str(bestAgent)
+        experimentDescriptor = description + "_GameExperimentNumber_" + str(i) + "_Training_Best_Agent_" + str(bestAgent)+ "Choice_"+str(agentsChoice)
+        isLogging = False
         metrics = ChefsHatExperimentHandler.runExperiment(numGames=numGames, playersAgents=playersAgents,
                                                           experimentDescriptor=experimentDescriptor,
                                                           isLogging=isLogging,
@@ -125,10 +153,10 @@ def runModel():
         loadModel = [loadModelAgent1, loadModelAgent2, loadModelAgent3, loadModelAgent4]
 
         #Initialize evaluation agents
-        agent1 = AgentDQL.AgentDQL([False, 0.1])
-        agent2 = AgentDQL.AgentDQL([False, 0.1])
-        agent3 = AgentDQL.AgentDQL([False, 0.1])
-        agent4 = AgentDQL.AgentDQL([False, 0,1])
+        agent1 = AgentPPO.AgentPPO([False, 0.1])
+        agent2 = AgentPPO.AgentPPO([False, 0.1])
+        agent3 = AgentPPO.AgentPPO([False, 0.1])
+        agent4 = AgentPPO.AgentPPO([False, 0,1])
         playersAgents = [agent1, agent2, agent3, agent4]
 
         print ("Testing - loading: " + str(loadModel))
@@ -136,6 +164,8 @@ def runModel():
         experimentDescriptor = description + "_GameExperimentNumber_" + str(i)+"_Test"
 
         numGames = 100
+        plotFrequency = 100  # plot the plots every X games
+        isLogging = False
         metrics = ChefsHatExperimentHandler.runExperiment(numGames=numGames, playersAgents=playersAgents,
                                                           experimentDescriptor=experimentDescriptor,
                                                           isLogging=isLogging,
@@ -155,13 +185,23 @@ def runModel():
         # wins = (numpy.array(p1[0].sum(), p2[0], p3[0], p4[0]) # Wins
 
         bestAgent = 0
+        secondBestAgent = 0
         bestWin = -5000
+        secondBestWin = -5000
         for a in range(4):
-            if wins[a] > bestWin:
+            if wins[a] >= bestWin:
                 bestWin = wins[a]
                 bestAgent = a
+            if wins[a] >= secondBestWin and wins[a]< bestWin:
+                secondBestWin = wins[a]
+                secondBestAgent = a
 
-        loadModel = [loadModel[bestAgent], loadModel[bestAgent], loadModel[bestAgent], loadModel[bestAgent]]
+
+        bestAgentsList.append(loadModel[bestAgent])
+        lastBestAgent = loadModel[bestAgent]
+        secondBestList.append(loadModel[secondBestAgent])
+
+        # loadModel = [loadModel[bestAgent], loadModel[bestAgent], loadModel[bestAgent], loadModel[bestAgent]]
 
 
         print ("Best Agent: " + str(bestAgent))

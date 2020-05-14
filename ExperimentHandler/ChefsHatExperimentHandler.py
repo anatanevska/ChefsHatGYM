@@ -1,14 +1,14 @@
 import gym
 import numpy
 
-from ChefsHatEnv.ChefsHatEnv import ChefsHatEnv
-
 from KEF import ExperimentManager
 
 from KEF import DataSetManager
 
+from ChefsHatEnv import ChefsHatEnv
 
-def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLogging=True,createDataset=True, isPlotting=True, plotFrequency=1, saveExperimentsIn="", loadModel=[], agentParams=[], rewardFunction =""):
+
+def runExperiment(numGames=-1, maximumScore=-1, playersAgents=[], experimentDescriptor="",isLogging=True,createDataset=True, isPlotting=True, saveExperimentsIn="", loadModel=[], agentParams=[], rewardFunction ="", plots=[]):
 
     numMaxCards = 11
 
@@ -18,9 +18,13 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
 
     experimentName = "Player_" + str(len(playersAgents)) + "_Cards_" + str(numMaxCards) + "_games_" + str(numGames) + "TrainingAgents_" + str(playersNames) + "_Reward_" + str(rewardFunction.rewardName)+"_"+experimentDescriptor
 
-    experimentManager = ExperimentManager.ExperimentManager(saveExperimentsIn,
-                                                            experimentName,
-                                                            verbose=True)
+    modelDirectory = ""
+    if isLogging or createDataset:
+        experimentManager = ExperimentManager.ExperimentManager(saveExperimentsIn,
+                                                                experimentName,
+                                                                verbose=True)
+        modelDirectory = experimentManager.modelDirectory
+
     #Logging
     if isLogging:
         logger = experimentManager.logManager
@@ -28,10 +32,6 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
         logger.write("Max Num Cards:"+ str(numMaxCards))
         logger.write("Players :" + str(len(playersAgents)))
         logger.write("Played games :"+ str(numGames))
-
-    #Experimental variables
-
-    players = [] # hold the players of the game
 
     env = gym.make('chefshat-v0') #starting the game Environment
     env.startNewGame(maxCardNumber=numMaxCards, numberPlayers=len(playersAgents), rewardFunction=rewardFunction) # initialize the environment
@@ -44,11 +44,36 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
     if len(agentParams)>0:
         params = agentParams[0]
 
+    #Experimental variables
+
+    players = [] # hold the players of the game
+    playersObservingOthers = [] #hold the index of the players that are observign the oponent moves
+
     for i in range(len(playersAgents)):
          playersAgents[i].startAgent((numMaxCards, env.numberOfCardsPerPlayer,  env.numberOfActions, loadModel[i], params))
          players.append(playersAgents[i])
+         if not playersAgents[i].intrinsic == None and playersAgents[i].intrinsic.isUsingOponentMood:
+            playersObservingOthers.append(i)
 
     metrics = []
+    qvaluesStore = []
+    for a in range (len(playersAgents)):
+        qvaluesStore.append([])
+
+        #Log the dataset
+        if createDataset:
+            experimentManager.dataSetManager.startNewExperiment()
+
+    #Collect game points
+    gamePoints = []
+
+    for i in range(len(players)):
+        gamePoints.append(0)
+
+    #Check stopping condition is points or numGames
+    if numGames == -1:
+        numGames = 500000
+
     #start the experiment
     for game in range(numGames):
 
@@ -58,7 +83,7 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
 
         #Log the dataset
         if createDataset:
-            experimentManager.dataSetManager.startNewGame(game)
+            experimentManager.dataSetManager.startNewGame(game, playersNames)
 
         if isLogging:
             logger.newLogSession("Game : " + str(game))
@@ -68,7 +93,7 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
                 logger.write("Player " + str(i) + ":" + str(env.playersHand[i]))
 
         if createDataset:
-            experimentManager.dataSetManager.dealAction(env.playersHand, env.allScores)
+            experimentManager.dataSetManager.dealAction(env.playersHand, game)
 
         roles = ""
         if game > 0:
@@ -89,7 +114,6 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
                 logger.write("- Souschef Player:" + str(env.currentRoles[1] + 1))
                 logger.write("- Chef Player:" + str(env.currentRoles[0] + 1))
 
-
                 if env.currentSpecialAction == "" or env.currentSpecialAction == "FoodFight" :
 
                     logger.newLogSession("Changing cards!")
@@ -99,7 +123,7 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
                     logger.write("--- Chef gave:" + str(chefCards))
 
             if createDataset:
-                experimentManager.dataSetManager.exchangeRolesAction(env.playersHand, roles, (env.currentSpecialAction, env.currentPlayerDeclaredSpecialAction, dishwasherCards, waiterCard, souschefCard, chefCards), env.allScores)
+                experimentManager.dataSetManager.exchangeRolesAction(env.playersHand, roles, (env.currentSpecialAction, env.currentPlayerDeclaredSpecialAction, dishwasherCards, waiterCard, souschefCard, chefCards), game)
 
         # #Start the game
         gameFinished = env.hasGameFinished()
@@ -115,15 +139,17 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
                     logger.write(" --- Board Before: " + str(env.board))
 
                 wrongActions = 0
+                totalActions = 0
+
+
                 if not env.hasPlayerFinished(thisPlayer):
                     validActionPlayer = False
 
                     #while the action is not valid, loop over the actions until it is valid
-
-                    # players[thisPlayer].resetActionsTaken()  # resets the list of actions taken
-
                     while not validActionPlayer:
                         state = env.getCurrentPlayerState()
+                        cardsInHandN = numpy.nonzero(env.playersHand[thisPlayer])[0]
+                        cardsInHand = len(cardsInHandN)
 
                         #get an action
                         validAction = env.getPossibleActions(thisPlayer)
@@ -134,32 +160,49 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
 
                         done = False
                         if validActionPlayer:
-                            if env.lastActionPlayers[thisPlayer] == DataSetManager.actionFinish:
+
+                            if env.lastActionPlayers[thisPlayer][0] == DataSetManager.actionFinish:
                                 done = True
                                 newState =  numpy.zeros(len(state))
 
-                            # print ("")
                         else:
                             wrongActions = wrongActions+1
 
-                        # amountOfInvalid = int((100 - game)*0.2)
-                        amountOfInvalid = int((numGames - game)*0.2)
+                        totalActions = totalActions+1
 
-                        # if done or wrongActions < amountOfInvalid or validAction:
-                        # # if validActionPlayer:
+
                         players[thisPlayer].train((state, action, reward, newState, done,
-                                                 experimentManager.modelDirectory, game, validAction, newPossibleActions, thisPlayer))
+                                                 modelDirectory, game, validAction, newPossibleActions, thisPlayer, env.score))
 
-
-                    correctActions = players[thisPlayer].currentCorrectAction
-                    totalActions = players[thisPlayer].totalActionPerGame
-                    # players[thisPlayer].resetActionsTaken() #resets the list of actions taken
                     if isLogging:
                         logger.write(" ---  Reward: " + str(reward))
-                        logger.write(" ---  Correct actions: " + str(correctActions) + "/" + str(totalActions))
+                        logger.write(" ---  Correct actions: " + str(totalActions-wrongActions) + "/" + str(totalActions))
                         logger.write(" ---  Wrong actions: " + str(wrongActions))
 
-                correctActions = players[thisPlayer].currentCorrectAction
+
+                    if createDataset:
+                        # if len(players[thisPlayer].QValues) >= 1:
+                        #     qvalues = players[thisPlayer].QValues[-1]
+                        # else:
+                        #     qvalues = []
+                        if len(players[thisPlayer].losses) >= 1:
+                            loss = players[thisPlayer].losses[-1]
+                        else:
+                            loss = []
+
+                        playersStatus = []
+                        for i in range(len(playersAgents)):
+                            playersStatus.append(env.lastActionPlayers[i])
+
+                        # print ("Player " + str(thisPlayer) + " - Wrong: " + str(wrongActions) + " - Total:" + str(totalActions))
+                        # print ("Player: " + str(thisPlayer) + " - Round:" + str(env.rounds))
+                        experimentManager.dataSetManager.doActionAction(game, thisPlayer, env.rounds,
+                                                                        env.lastActionPlayers[thisPlayer], env.board,
+                                                                        wrongActions, reward,
+                                                                        env.playersHand, roles,
+                                                                        env.score, playersStatus,
+                                                                        action, loss, totalActions,validAction)
+
                 env.nextPlayer()
                 if isLogging:
                     logger.write(" ---  Action: " + str(env.lastActionPlayers[thisPlayer]))
@@ -167,41 +210,24 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
                     logger.write(" ---  Hand: " + str(env.playersHand[thisPlayer]))
                     logger.write(" --- Board After: " + str(env.board))
 
-                if createDataset:
-                    playersStatus = []
-                    for i in range(len(playersAgents)):
-                        playersStatus.append(env.lastActionPlayers[i])
 
-                    experimentManager.dataSetManager.doActionAction(thisPlayer, env.rounds, env.lastActionPlayers[thisPlayer], env.board, wrongActions, correctActions, reward , env.playersHand, roles,
-                                                                         env.score, playersStatus)
-
-            #input("here")
             env.nextRound() # All players played, now one more round
-            # print ("Next round")
+
             pizzaReady = env.isEndRound() # check if the pizza is ready
             if pizzaReady:
                 if isLogging:
                     logger.newLogSession("Pizza ready!!!")
 
                 if createDataset:
+                    # print ("Pizza!")
                     experimentManager.dataSetManager.doActionPizzaReady(env.rounds,
                                                                     env.board, env.playersHand, roles,
-                                                                    env.score, playersStatus)
+                                                                    env.score, playersStatus, game)
             gameFinished = env.hasGameFinished()
+
 
         if isLogging:
             logger.write("Game finished:" + str(gameFinished))
-
-        if isLogging:
-            logger.newLogSession("Plotting...")
-            logger.write("Plots saved in:" + str(experimentManager.plotManager.plotsDirectory))
-
-        if isPlotting and (game+1)%plotFrequency==0:
-            experimentManager.plotManager.plotTimeLine(env.playerActionsTimeLine, len(playersAgents), game)
-
-            experimentManager.plotManager.plotDiscardBehavior(len(playersAgents), env.playerActionsComplete, game)
-
-            experimentManager.plotManager.plotNumberOfActions(len(playersAgents), env.playerActionsComplete, game)
 
         #saving the metrics
         for p in range(len(playersAgents)):
@@ -234,48 +260,33 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
                 metricsPerGame.append(discardCount) #p__q_discard
 
         env.reset()  # start a new game
+
+
         unique, counts = numpy.unique(env.winners, return_counts=True)
         winners = dict(zip(unique, counts))
         print( "Game " + str(game) + " - Victories:" +str(winners) )
 
         metrics.append(metricsPerGame)
 
-        agentsType = []
-        if isPlotting and (game+1)%plotFrequency==0:
-            correctActions = []
-            totalActions = []
-            losses = []
-            qvalues = []
-            probs = []
-            sActions = []
-            for p in players:
-                correctActions.append(p.totalCorrectAction)
-                totalActions.append(p.totalAction)
-                losses.append(p.losses)
-                agentsType.append(p.name)
-                qvalues.append(p.QValues)
-                probs.append(p.Probability)
-                # sActions.append(p.SelectedActions)
+        #Points attribution
+        winningPlayerPoint = 0
+        for positionIndex in range(len(players)):
+            positionPlayer = env.allScores[-1].index(positionIndex)
+            points = 3 - positionPlayer
+            gamePoints[positionIndex] += points
+            if gamePoints[positionIndex] > winningPlayerPoint:
+                winningPlayerPoint = gamePoints[positionIndex]
 
-            experimentManager.plotManager.plotRounds(env.allRounds, game)
-            experimentManager.plotManager.plotRewardsAll(len(playersAgents), env.allRewards, game)
-            experimentManager.plotManager.plotWinners(len(playersAgents), env.winners, game, agentsType)
-            experimentManager.plotManager.plotCorrectActions(len(playersAgents), correctActions,totalActions,  game)
-            experimentManager.plotManager.plotWrongActions(len(playersAgents), env.allWrongActions, game)
-            experimentManager.plotManager.plotFinishPositionAllPlayers(len(playersAgents), env.allScores, env.winners, game)
-            experimentManager.plotManager.plotLosses(len(playersAgents), losses, game)
-            experimentManager.plotManager.plotNumberOfActionsTotal(len(playersAgents), env.playerActionsCompleteAllGames, game)
-            experimentManager.plotManager.plotQValues(len(playersAgents), qvalues, sActions, env.highLevelActions,  game)
-            experimentManager.plotManager.plotProbabilitySuccess(len(playersAgents), probs, game)
+        if maximumScore > -1:
+            if winningPlayerPoint >= maximumScore:
+                break
 
 
+    if isLogging or createDataset:
+     experimentManager.metricManager.saveMetricPlayer(metrics)
 
-        # experimentManager.plotManager.plotWrongActions(len(playersAgents), env.allWrongActions, game)
-        #
-        #
-
-    experimentManager.metricManager.saveMetricPlayer(metrics)
     returns = []
+
     returns.append(env.allRounds) #total rounds per game
     returns.append(env.startGameFinishingPosition) #starting finishing position
 
@@ -299,7 +310,7 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
         winners = numpy.array(env.winners)
         currentPLayerData = []
 
-        # print("Score:", scoresAll)
+
         totalWins = 0
         for a in range(len(winners)):
             result = env.allScores[a].index(i) + 1
@@ -327,12 +338,44 @@ def runExperiment(numGames=10, playersAgents=[], experimentDescriptor="",isLoggi
         playerReturn.append(averageRewards) #rewards
         playerReturn.append(env.allWrongActions[i])  # wrong actions
         playerReturn.append(players[i].lastModel)
+        playerReturn.append(players[i].totalAction) # total actions per game
 
         QValues = players[i].QValues
         playerReturn.append(QValues)
 
         returns.append(playerReturn)
 
+
+    #Total actions per player
+    #Total points per player
+    returns.append(gamePoints) #Total score
+    returns.append(game)#Total games
+
+
+    if createDataset:
+        experimentManager.dataSetManager.saveFile()
+
+    if createDataset and isPlotting:
+        if isLogging:
+            logger.newLogSession("Plotting...")
+            logger.write("Plots saved in:" + str(experimentManager.plotManager.plotsDirectory))
+
+        qvalueModels = []
+        intrinsicMoods = []
+        for p in players:
+            if not p.intrinsic == None:
+                qvalueModels.append(p.actor)
+                intrinsicMoods.append(p.intrinsic)
+
+        intrinsicDataset = ""
+        if len(intrinsicMoods) >0:
+            from MoodyFramework.Mood.Intrinsic import GenerateMoodFromDataset
+            GenerateMoodFromDataset.generateMoodFromDataset(intrinsicModels=intrinsicMoods,
+                                                            dataset=experimentManager.dataSetManager.currentDataSetFile,
+                                                            qModels=qvalueModels, saveDirectory=experimentManager.dataSetManager.dataSetDirectory)
+            intrinsicDataset = experimentManager.dataSetManager.dataSetDirectory
+
+        experimentManager.plotManager.generateAllPlots(plots, experimentManager.dataSetManager.currentDataSetFile, game, intrinsicDataset=intrinsicDataset)
 
     return returns
 

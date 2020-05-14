@@ -108,12 +108,6 @@ class ExperimentManager:
 
         self._modelDirectory = self.baseDirectory + "/" + self.experimentName + "/Model"
 
-        """Creating the Outputs Folder"""
-
-        self._createFolder("Outputs")
-
-        self._outputsDirectory = self.baseDirectory + "/" + self.experimentName + "/Outputs"
-
         """Creating the Plots Folder"""
         self._createFolder("Plots")
 
